@@ -1,6 +1,6 @@
 ---
 name: session-report
-description: Generate an explorable HTML report of Claude Code session usage (tokens, cache, subagents, skills, expensive prompts) from ~/.claude/projects transcripts.
+description: Generate an explorable HTML report of Claude Code session usage (tokens, cache, subagents, skills, expensive prompts) from ~/.claude/projects transcripts. Use when the user asks to analyze, summarize, or visualize their Claude Code usage, token/cost breakdown, or session activity.
 ---
 
 # Session Report
