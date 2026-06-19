@@ -1,0 +1,82 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "acacia-skills",
+  "owner": {
+    "name": "Jose Pablo Herrera",
+    "email": "h.josepablo@gmail.com"
+  },
+  "metadata": {
+    "description": "Personal curated bundle of Claude skills + frontend-slides",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "acacia-skills",
+      "description": "Curated collection of 48 Claude skills (documents, design, dev workflow, MCP/plugin authoring, superpowers).",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/agent-development",
+        "./skills/algorithmic-art",
+        "./skills/brainstorming",
+        "./skills/brand-guidelines",
+        "./skills/build-mcp-app",
+        "./skills/build-mcp-server",
+        "./skills/build-mcpb",
+        "./skills/canvas-design",
+        "./skills/cardputer-buddy",
+        "./skills/claude-api",
+        "./skills/claude-automation-recommender",
+        "./skills/claude-md-improver",
+        "./skills/command-development",
+        "./skills/dispatching-parallel-agents",
+        "./skills/doc-coauthoring",
+        "./skills/docx",
+        "./skills/executing-plans",
+        "./skills/finishing-a-development-branch",
+        "./skills/frontend-design",
+        "./skills/hook-development",
+        "./skills/internal-comms",
+        "./skills/m5-onboard",
+        "./skills/math-olympiad",
+        "./skills/mcp-builder",
+        "./skills/mcp-integration",
+        "./skills/pdf",
+        "./skills/plugin-settings",
+        "./skills/plugin-structure",
+        "./skills/pptx",
+        "./skills/receiving-code-review",
+        "./skills/requesting-code-review",
+        "./skills/session-report",
+        "./skills/skill-creator",
+        "./skills/skill-development",
+        "./skills/slack-gif-creator",
+        "./skills/subagent-driven-development",
+        "./skills/systematic-debugging",
+        "./skills/test-driven-development",
+        "./skills/theme-factory",
+        "./skills/using-git-worktrees",
+        "./skills/using-superpowers",
+        "./skills/verification-before-completion",
+        "./skills/web-artifacts-builder",
+        "./skills/webapp-testing",
+        "./skills/writing-hookify-rules",
+        "./skills/writing-plans",
+        "./skills/writing-skills",
+        "./skills/xlsx"
+      ]
+    },
+    {
+      "name": "frontend-slides",
+      "description": "Zero-dependency HTML presentation generator with bold templates and PPT conversion.",
+      "source": "./plugins/frontend-slides",
+      "category": "productivity",
+      "tags": [
+        "presentations",
+        "slides",
+        "html",
+        "design"
+      ]
+    }
+  ]
+}
