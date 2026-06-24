@@ -77,6 +77,19 @@
         "html",
         "design"
       ]
+    },
+    {
+      "name": "base44",
+      "description": "Build and deploy Base44 full-stack apps with CLI project management and JavaScript/TypeScript SDK development skills.",
+      "source": "./plugins/base44",
+      "category": "development",
+      "tags": [
+        "base44",
+        "full-stack",
+        "sdk",
+        "cli",
+        "deployment"
+      ]
     }
   ]
 }
