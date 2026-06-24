@@ -15,6 +15,8 @@ your local machine **and** cloud sessions / cloud agents.
   `plugin-structure`, `writing-skills`, …).
 - **`frontend-slides`** plugin — HTML presentation generator with templates and
   PPTX conversion.
+- **`base44`** plugin — official Base44 skills (`base44-cli`, `base44-sdk`,
+  `base44-troubleshooter`) for building and deploying full-stack Base44 apps.
 
 ## Install
 
@@ -24,6 +26,7 @@ your local machine **and** cloud sessions / cloud agents.
 claude plugin marketplace add jospabloh/claude-skills   # or your fork's slug
 claude plugin install acacia-skills@acacia-skills
 claude plugin install frontend-slides@acacia-skills
+claude plugin install base44@acacia-skills
 ```
 
 ### In the cloud (Claude Code web / cloud agents)
