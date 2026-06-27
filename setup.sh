@@ -18,6 +18,7 @@ claude plugin marketplace add "${MARKETPLACE}" || \
 echo "==> Installing plugins"
 claude plugin install acacia-skills@acacia-skills
 claude plugin install frontend-slides@acacia-skills
+claude plugin install base44@acacia-skills
 
 echo "==> Done. Restart Claude Code (local) for the skills to register."
 claude plugin list
