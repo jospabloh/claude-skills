@@ -22,8 +22,9 @@ REPO="${CLAUDE_PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}
 # GitHub slug) so it works offline and always matches the current checkout.
 claude plugin marketplace add "$REPO" >/dev/null 2>&1 || true
 
-# Install + enable both plugins (no-ops when already present).
+# Install + enable all three marketplace plugins (no-ops when already present).
 claude plugin install acacia-skills@acacia-skills   >/dev/null 2>&1 || true
 claude plugin install frontend-slides@acacia-skills >/dev/null 2>&1 || true
+claude plugin install base44@acacia-skills          >/dev/null 2>&1 || true
 
 exit 0
