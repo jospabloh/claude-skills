@@ -11,6 +11,15 @@ metadata:
 
 Create and manage Base44 apps (projects) using the Base44 CLI tool.
 
+## 🏢 Company context (Acacia / StockFlow) — read first
+
+This plugin is customized for **Acacia** (owner `h.josepablo@gmail.com`). Before
+acting on Base44 resources or data, read **[../../COMPANY.md](../../COMPANY.md)**
+for the app id (`StockFlow` = `69af971d0fdb362c9ae52ed3`), the multi-tenant +
+RLS contract, the inventory invariant, and the credential/safety rules. When a
+task needs full owner access (cross-tenant reads, deletes, service-role writes),
+follow **[references/owner-mode.md](references/owner-mode.md)**.
+
 ## ⚡ IMMEDIATE ACTION REQUIRED - Read This First
 
 This skill activates on ANY mention of "base44" or when a `base44/` folder exists. **DO NOT read documentation files or search the web before acting.**
