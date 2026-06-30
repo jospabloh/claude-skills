@@ -1,75 +1,69 @@
-# Company Profile — Acacia / StockFlow (Owner Mode)
+# Company Profile — Acacia (Base44 owner)
 
-> Company-specific configuration for the `base44` plugin. This file is loaded by
-> the base44 skills to tailor behavior to this company's apps, tenancy model, and
-> owner workflows. **It contains no secrets** — credentials live only in the
-> gitignored local file described under "Owner access", never in this repo.
+> Company-wide configuration for the `base44` plugin. It applies to **all** of
+> this owner's Base44 apps — not any single app. It tailors the base44 skills to
+> this company's identity, owner-access workflows, and conventions.
+> **No secrets are stored here** — credentials live only in gitignored local
+> files / env vars (see "Owner access").
 
 ## Identity
 
 - **Company / org:** Acacia
 - **Owner:** Jose Pablo Herrera — `h.josepablo@gmail.com`
-- **Primary Base44 app:** **StockFlow** — `appId: 69af971d0fdb362c9ae52ed3`
-  - Repo: `jospabloh/stockflow` (schema-as-code in `base44/entities/*.jsonc`,
-    backend functions in `base44/functions/*/entry.ts`).
 
-## Tenancy model (read before any data operation)
+## App registry (all apps, extensible)
 
-StockFlow is **multi-tenant**. Every business-scoped record carries a
-`business_id`, and tenants are isolated by Row-Level Security. Known tenants:
+This plugin serves every app under this owner. Discover the live list with
+`npx base44 whoami` / the Base44 MCP `list_user_apps`, and add rows here as apps
+are created. Always target operations at a specific app via its `appId`
+(`--app-id` for the CLI, the `appId` arg for MCP tools).
 
-| Business | `business_id` |
-|---|---|
-| Baristop Distribuidora | `69c575fa1beaf2c90214d3ee` |
-| ACACIA OWNER SANDBOX | `69c593f99e0839c7e07fb5d0` |
+| App | `appId` | Repo | Notes |
+|---|---|---|---|
+| StockFlow | `69af971d0fdb362c9ae52ed3` | `jospabloh/stockflow` | Multi-tenant inventory; see `stockflow/CLAUDE.md` |
+| _add new apps here_ | | | |
 
-**Always scope queries/mutations by `business_id`.** The full RLS contract (the
-two-halves rule, the `asServiceRole` admin branch required on all four ops) is
-documented in `stockflow/CLAUDE.md` — treat it as authoritative and run
-`npm run validate:rls` after touching any `rls` block.
+Per-app specifics (entities, tenancy, RLS, business rules) live in **that app's
+own repo / `CLAUDE.md`**, not in this file. Read the target app's docs before
+operating on its data.
 
-## Inventory model invariant
+## Conventions that apply across apps
 
-`applyMovementStock` is the single authority for stock deltas and is idempotent
-via `Movement.stock_applied`. On record **delete**, the `syncProductStock`
-automation re-adds the exit quantity (`+qty`, floored at 0). When remediating
-duplicated movements, **delete first, then SET the corrected stock** — the final
-set overrides the automation's revert and is exact even where a burst clamped at 0.
+- **Multi-tenancy:** most apps here are tenant-scoped by a `business_id` (or
+  equivalent) with Row-Level Security. Always scope queries/mutations by the
+  tenant key, and never let one tenant's id leak into another's records. Each
+  app's RLS contract is authoritative in its own repo (e.g. StockFlow's
+  two-halves rule + `asServiceRole` admin branch in `stockflow/CLAUDE.md`).
+- **Idempotent writes / inventory:** when an app uses an "apply exactly once"
+  stock/ledger model, remediating duplicates means **delete the duplicate
+  records first, then SET the corrected value** (a final set overrides any
+  automation that reverts on delete). Confirm the app's specific model first.
 
-## Owner access (how Claude Code operates as owner)
+## Owner access (how Claude Code acts as owner — same for every app)
 
-Owner-level access does **not** come from this plugin (skills are instructions).
-It comes from one of these channels — pick the one available in the current
-environment:
+Owner access does **not** come from this plugin (skills are instructions). It
+comes from one of these channels — pick whichever the current environment allows
+(see `references/owner-mode.md` for commands):
 
 1. **Base44 MCP connector** (works through the pre-configured proxy). Read +
-   update + create are available by default. **Delete and sandbox execution
-   require the `sandbox:write` scope** — grant it by reconnecting the Base44
-   connector (in Cowork desktop: Settings → Connectors → Base44 → Manage
-   permissions → approve sandbox/write). With that scope, `run_command` can run
-   service-role SDK scripts (full owner access incl. delete).
-2. **Base44 CLI** — `npx base44 login` (OAuth device-code flow), then
-   `npx base44 exec` runs SDK scripts pre-authenticated as the owner
-   (`base44.entities.<E>.delete(id)`, `base44.asServiceRole`, …).
-   ⚠️ **Requires network egress to the Base44 auth endpoints.** In locked-down
-   remote environments the device-code request returns `403 Forbidden`
-   ("host not in allowlist"); add the Base44 auth/api hosts to the environment's
-   network policy, or use channel 1 instead.
+   update + create are available by default; **delete and sandbox execution need
+   the `sandbox:write` scope** — grant it by reconnecting the Base44 connector
+   (Cowork desktop: Settings → Connectors → Base44 → Manage permissions).
+2. **Base44 CLI** — `npx base44 login` (OAuth device-code) → `npx base44 exec`
+   runs SDK scripts pre-authenticated as the owner, for any app via `--app-id`.
+   ⚠️ Requires network egress to the Base44 auth endpoints; locked-down remote
+   environments return `403 host-not-allowed` — use channel 1 or adjust the
+   environment's network policy.
 
 ### Credentials — never commit
 
-Any owner token, API key, or `BASE44_APP_ID` override goes in a **gitignored**
-local file or env var, never in this repo:
+Owner tokens / API keys / `BASE44_APP_ID` overrides go in a **gitignored** local
+file (`.claude/base44.local.md`) or env vars, never in this repo. `*.local.md`
+and `.env*` are gitignored here.
 
-- Local plugin settings: `.claude/base44.local.md` (gitignored) — see
-  `references/owner-mode.md`.
-- Or environment variables: `BASE44_APP_ID`, plus the CLI's own stored token.
-
-## Safety rules for owner operations
+## Safety rules for owner operations (all apps)
 
 - **Confirm destructive data operations** (delete / bulk update of production
-  records) before executing, and prefer a dry-run/preview first.
-- **Respect tenant isolation** — never let one tenant's `business_id` leak into
-  another's records.
-- Remediations on production sales/inventory should run during a **quiet window**
-  (no active selling) to avoid racing concurrent movements.
+  records) before executing; prefer a dry-run/preview first.
+- Run production data remediations during a **quiet window** (no active writes).
+- Respect each app's tenant isolation and RLS contract.
