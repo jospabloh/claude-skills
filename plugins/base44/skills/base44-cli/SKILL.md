@@ -11,6 +11,17 @@ metadata:
 
 Create and manage Base44 apps (projects) using the Base44 CLI tool.
 
+## 🏢 Company context (Acacia — all apps) — read first
+
+This plugin is customized for **Acacia** (owner `h.josepablo@gmail.com`) and
+applies to **all** of this owner's Base44 apps. Before acting on Base44 resources
+or data, read **[../../COMPANY.md](../../COMPANY.md)** for the app registry
+(target each app by its `appId`), the cross-app multi-tenant/RLS conventions, the
+owner-access channels, and the credential/safety rules. Per-app specifics live in
+that app's own repo/`CLAUDE.md`. When a task needs full owner access
+(cross-tenant reads, deletes, service-role writes), follow
+**[references/owner-mode.md](references/owner-mode.md)**.
+
 ## ⚡ IMMEDIATE ACTION REQUIRED - Read This First
 
 This skill activates on ANY mention of "base44" or when a `base44/` folder exists. **DO NOT read documentation files or search the web before acting.**
