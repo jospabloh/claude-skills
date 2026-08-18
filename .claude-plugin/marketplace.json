@@ -12,10 +12,11 @@
   "plugins": [
     {
       "name": "acacia-skills",
-      "description": "Curated collection of 48 Claude skills (documents, design, dev workflow, MCP/plugin authoring, superpowers).",
+      "description": "Curated collection of 49 Claude skills (documents, design, dev workflow, MCP/plugin authoring, superpowers).",
       "source": "./",
       "strict": false,
       "skills": [
+        "./skills/acacia-app-standard",
         "./skills/agent-development",
         "./skills/algorithmic-art",
         "./skills/brainstorming",

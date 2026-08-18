@@ -6,13 +6,15 @@ your local machine **and** cloud sessions / cloud agents.
 
 ## What's inside
 
-- **`acacia-skills`** plugin — 48 skills covering documents (`docx`, `pdf`,
+- **`acacia-skills`** plugin — 49 skills covering documents (`docx`, `pdf`,
   `pptx`, `xlsx`), design (`frontend-design`, `canvas-design`, `theme-factory`,
   `brand-guidelines`, `algorithmic-art`), web (`webapp-testing`,
   `web-artifacts-builder`), dev workflow (the `superpowers` set:
   `brainstorming`, `systematic-debugging`, `test-driven-development`,
-  `writing-plans`, …), and authoring (`skill-creator`, `mcp-builder`,
-  `plugin-structure`, `writing-skills`, …).
+  `writing-plans`, …), authoring (`skill-creator`, `mcp-builder`,
+  `plugin-structure`, `writing-skills`, …), and the ACACIA portfolio's own
+  `acacia-app-standard` (apply/audit the shared module contract every
+  Mission Control app must implement — mirrors `jospabloh/acacia-app-standard`).
 - **`frontend-slides`** plugin — HTML presentation generator with templates and
   PPTX conversion.
 - **`base44`** plugin — official Base44 skills (`base44-cli`, `base44-sdk`,
