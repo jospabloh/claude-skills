@@ -91,6 +91,20 @@
         "cli",
         "deployment"
       ]
+    },
+    {
+      "name": "whatsapp-agentkit",
+      "description": "Interview a business owner and build them a complete WhatsApp AI agent — FastAPI webhook server, Claude-powered brain, per-customer memory, Zernio/Meta Cloud API adapters, and a Railway deploy.",
+      "source": "./plugins/whatsapp-agentkit",
+      "category": "development",
+      "tags": [
+        "whatsapp",
+        "agent",
+        "chatbot",
+        "fastapi",
+        "claude",
+        "customer-support"
+      ]
     }
   ]
 }

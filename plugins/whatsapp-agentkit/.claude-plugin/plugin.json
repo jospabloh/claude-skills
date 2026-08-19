@@ -1,0 +1,15 @@
+{
+  "name": "whatsapp-agentkit",
+  "version": "1.0.0",
+  "description": "Interview a business owner and build them a complete WhatsApp AI agent — FastAPI webhook server, Claude-powered brain, per-customer memory, Zernio/Meta Cloud API adapters, and a Railway deploy — end to end.",
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "author": {
+    "name": "Todo de IA — @soyenriquerocha",
+    "url": "https://github.com/Hainrixz/whatsapp-agentkit"
+  },
+  "homepage": "https://hainrixz.github.io/whatsapp-agentkit/",
+  "repository": "https://github.com/Hainrixz/whatsapp-agentkit",
+  "license": "MIT",
+  "keywords": ["whatsapp", "agent", "chatbot", "fastapi", "claude", "zernio", "meta-cloud-api", "railway", "customer-support"]
+}
