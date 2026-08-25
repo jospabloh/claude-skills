@@ -433,6 +433,16 @@ new top-level section.
 The login screen is the first thing every tenant's staff sees, and it's the
 one screen every app in the portfolio should look like it came from the same
 company. Concretely, "pro" means:
+- **A real in-app screen, not Base44's default hosted login.** Never send the
+  user to `base44.auth.redirectToLogin()`'s own generic page — that page is
+  the same for every Base44 app on the platform and carries none of this
+  app's branding, so a tenant clicking through from `acaciaco-site` lands
+  somewhere that visibly isn't the product they were just looking at.
+  Canonical pattern: FlowFin's `src/pages/Login.jsx` renders its own
+  email/password fields and calls `base44.auth.loginViaEmailPassword(email,
+  password)` directly (plus `base44.auth.loginWithProvider('google', ...)`
+  for OAuth) — the credential entry itself happens on this app's own route,
+  under this app's own layout, never a redirect away from it.
 - Same visual language as the rest of the app (design tokens, not one-off
   colors) and as `acaciaco-site`'s own branding — a user clicking through from
   the marketing site should not land somewhere that looks like a different
