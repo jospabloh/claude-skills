@@ -74,6 +74,48 @@ new app needs a lifecycle email Mission Control's unified cron doesn't send yet
 reminders as one open gap at time of writing), the fix is to extend the shared
 cron, not to add a parallel one.
 
+**Two numbers are portfolio-wide constants, not per-app choices:**
+- **Trial length is 30 calendar days**, set once at tenant creation
+  (`trial_end_at = created_at + 30 days`, server time — never trust the
+  client's clock for a commercial state). FlowFin's `createFamily.ts` already
+  does exactly this; every app's own self-serve tenant creation (below) must
+  match it.
+- **Automatic renewal always lands on the 1st of the calendar month**,
+  regardless of the app's own day-of-month convention for anything else.
+  This is already true today — Mission Control's `licenseControl.js` forces
+  `dayConvention: 'first_of_month'` on every Mercado Pago auto-charge
+  (`dayConventionOverride`, "la renovación automática fuerza first_of_month
+  ... sin importar el dayConvention normal del app") even for apps whose
+  *manual* payment-confirmation convention is `preserve_day`. It was only
+  ever documented in that one code comment; it is a portfolio rule now; an
+  app's own `calculateExpiry`-equivalent (client-facing "renews on…" copy)
+  must agree with it for anything auto-billed, and may use its own
+  convention only for a manually-confirmed one-off payment.
+
+**Self-serve tenant creation: automatic trial, and Mission Control has to
+know immediately.** Any authenticated user with no tenant may create one —
+this is how a portfolio app actually onboards its very first tenants, and
+gating it behind an invite would mean nobody can ever be first. The new
+tenant starts in `billing_status: 'trial'` with the 30-day clock above,
+exactly like FlowFin's `createFamily.ts`. What FlowFin does **not** yet do,
+and no app in the portfolio does yet, is the other half: **the platform
+owner has to find out the same way a new support ticket does (Module 8),
+not by waiting for the 08:00 UTC sync.** Fire-and-forget an ingest call the
+moment the tenant is created — same shape as Module 8's `ticket-pull`
+(`{app, tenant_id}`, HMAC-signed, `.catch(() => {})` so a notification
+failure never blocks onboarding) — so Mission Control can write an `alerts`
+row (`kind: 'new_tenant'`, the same `alerts` table `ingestTicket.js` already
+writes `kind: 'support_ticket'` rows to) and push a notification to the
+platform owner. **Neither side of this exists yet**: no app has the call
+site, Mission Control has no `/api/ingest/tenant-created`-equivalent
+endpoint, and — this is the more surprising gap — **nothing in Mission
+Control's own UI reads the `alerts` table at all**, including the
+`support_ticket` rows it already writes. Building the ingest endpoint
+without also surfacing `alerts` somewhere an operator actually looks (a
+Dashboard widget, at minimum) would make the write real but the alert
+invisible; both halves are the module, same as Module 8's "write it, then
+make sure someone sees it in real time, not just in a sync job" shape.
+
 ---
 
 ## 2. User & role control — two layers, don't conflate them
@@ -98,6 +140,33 @@ app's own users.
   table has no automatic role inside your app, and vice versa. Mission Control
   reaches your app's data through the service-role adapter, not by impersonating
   one of your app's users.
+
+**Who can change an admin's role, and how a new member gets in at all** — two
+rules that hold for every app, whatever the role model's exact names are:
+
+- **Only a tenant's own admin can promote a member to admin or demote a
+  fellow admin to a lower role.** Same server-derivation discipline as
+  Module 7's danger zone (the actor's admin status is re-checked against
+  their own stored membership in *this* tenant, never assumed from a client
+  flag) — promoting and demoting are the same operation with the direction
+  flipped, so they share one code path and one gate, not two that can drift.
+  Guard against locking a tenant out of its own admin tier: a demote that
+  would leave zero admins on the tenant is rejected, not silently allowed —
+  there is no support-ticket-free way back in once that happens.
+- **A member joins an existing tenant one of two ways: an invite code, or
+  an emailed invite** — never an open "anyone who signs up lands in this
+  tenant" path (that's what self-serve tenant *creation*, Module 1, is for;
+  joining an *existing* one is different and needs the existing admin's
+  consent). A code is share-anything, request-then-approve (FlowFin's
+  `join_code` + `selfJoin`/`approveMember` pattern: the code gets a pending
+  request in front of the tenant's admin, it does not grant access by
+  itself). An emailed invite is admin-initiated and pre-approved — the admin
+  names who they're inviting, so there's no separate approval step once the
+  invitee accepts. An app needs at least one of the two; needing both
+  depends on how the tenant actually recruits members (FlowFin currently
+  ships only the code path — no emailed-invite action exists yet, a gap
+  worth closing given most of its families are recruited by a family member
+  sending a code over chat, exactly the case an emailed invite is for).
 
 ---
 
