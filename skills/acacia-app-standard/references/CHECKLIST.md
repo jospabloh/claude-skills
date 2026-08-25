@@ -15,9 +15,21 @@ jospabloh/acacia-app-standard. Status:
 - [ ] Module 1 — License lifecycle: tenant entity has `billing_status`
       (trial|active|view_only|suspended), written ONLY by Mission Control's
       unified cron. No native lifecycle/renewal/reminder cron in this repo.
+      Trial is exactly 30 calendar days from tenant creation; automatic
+      (Mercado Pago) renewal always lands on the 1st of the calendar month
+      regardless of the app's manual-payment day convention. Self-serve
+      tenant creation (any user with no tenant may create one) sets
+      billing_status: trial and fires a real-time, HMAC-signed ping to
+      Mission Control so the platform owner is alerted immediately, not at
+      the next daily sync.
 - [ ] Module 2 — Roles: app role model declared in one file, mapped onto the
       backend's built-in role field; Mission Control operator roles
-      (owner/admin/viewer) are a separate layer, never conflated.
+      (owner/admin/viewer) are a separate layer, never conflated. Only a
+      tenant's own admin can promote a member to admin or demote a fellow
+      admin (same server-derived gate, shared code path, blocked if it would
+      leave zero admins). Joining an EXISTING tenant is by invite code
+      (request → admin approves) or emailed invite (admin-initiated,
+      pre-approved) — never an open self-serve join.
 - [ ] Module 3 — Granular permissions: one client registry file + server-side
       re-check on every write path (permission key, in the same precedence
       order as the client), gated behind billing_status too. No entity is
