@@ -64,8 +64,11 @@ jospabloh/acacia-app-standard. Status:
       08:00 UTC sync is the backstop; on its own it costs the customer a day.
 - [ ] Module 9 — acaciaco-site: this app has a page under apps/ (or freeware/),
       using styles/base.css tokens, dark-theme correct.
-- [ ] Module 10 — Login page: on-brand, real error/suspended/view_only states,
-      links to trial and support, dark-theme correct.
+- [ ] Module 10 — Login page: a real in-app screen (own email/password
+      fields calling loginViaEmailPassword/loginWithProvider directly) —
+      NEVER a redirect to Base44's default hosted login. On-brand, real
+      error/suspended/view_only states, links to trial and support,
+      dark-theme correct.
 
 - [ ] Module 11 — Deploy discipline: `base44.app.json` + `npm run deploy`
       (refuses `--app-id`), `deploy:site` for the frontend (merging to `main`
