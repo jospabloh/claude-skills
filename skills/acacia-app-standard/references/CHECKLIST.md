@@ -68,7 +68,10 @@ jospabloh/acacia-app-standard. Status:
       fields calling loginViaEmailPassword/loginWithProvider directly) —
       NEVER a redirect to Base44's default hosted login. On-brand, real
       error/suspended/view_only states, links to trial and support,
-      dark-theme correct.
+      dark-theme correct. Every social button shown corresponds to a
+      provider actually enabled on the Base44 app — an unconfigured one
+      (e.g. Apple when it isn't set up) is removed, never left for a user
+      to tap into a dead end.
 
 - [ ] Module 11 — Deploy discipline: `base44.app.json` + `npm run deploy`
       (refuses `--app-id`), `deploy:site` for the frontend (merging to `main`
@@ -130,18 +133,28 @@ jospabloh/acacia-app-standard. Status:
       Sincronizar ahora and confirm an `app_health` row with `status: ok` and a
       `control:run-sync` audit row for this app.
 
-- [ ] Module 18 — Multi-tenant account switching: the resolver that derives a
-      caller's tenant from creator/owner_email/members[] computes the FULL set
-      of matches, not just the first, and returns it alongside whatever is
-      already persisted — a persisted, still-valid tenant_id keeps winning, an
-      unambiguous single candidate still auto-assigns, and only true ambiguity
-      (no persisted tenant_id, 2+ candidates) blocks on a choice instead of
-      guessing. A dedicated switch endpoint re-derives the caller's candidate
-      set from scratch server-side (never trusts the requested tenant_id) and
-      answers a tenant the caller doesn't belong to with the exact same
-      refusal as a nonexistent one. The switcher control is visible only when
-      there is more than one candidate, and a successful switch hard-reloads
-      rather than resetting tenant-scoped state in place.
+- [ ] Module 18 — Multi-tenant account switching AND joining, on a first-class
+      `Membership` entity (CtrlHQ's shape — one row per `(tenant_id, user_id,
+      role)`, `read` keyed on `{{user.id}}`), not an embedded
+      `owner_email`/`members[]` array: the resolver computes the FULL set of
+      a caller's tenants, not just the first, and returns it alongside
+      whatever is already persisted — a persisted, still-valid tenant_id keeps
+      winning, an unambiguous single candidate still auto-assigns, and only
+      true ambiguity (no persisted tenant_id, 2+ candidates) blocks on a
+      choice instead of guessing. Joining a tenant by invite code ALWAYS
+      succeeds regardless of how many other tenants the caller already
+      belongs to — the only refusal is already-a-member-of-*this*-tenant,
+      never "you belong to a different one, leave it first" — and a
+      successful join immediately moves the caller into the newly joined
+      tenant. The join/create screen is reachable from inside the app (an
+      account-menu/sidebar "crear o unirme a otro" entry), not gated
+      exclusively on "no tenant yet". A dedicated switch endpoint re-derives
+      the caller's candidate set from scratch server-side (never trusts the
+      requested tenant_id) and answers a tenant the caller doesn't belong to
+      with the exact same refusal as a nonexistent one. The switcher control
+      is visible only when there is more than one candidate, and a successful
+      switch or join hard-reloads rather than resetting tenant-scoped state in
+      place.
 
 - [ ] Module 19 — Lock survives debugging: every security-relevant RLS/field
       lock this app has (Module 1's `billing_status`, Module 14's tenant-pointer
