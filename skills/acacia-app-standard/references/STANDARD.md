@@ -452,6 +452,20 @@ company. Concretely, "pro" means:
   rate-limit/lockout feedback if you have one.
 - No dead ends: a link to request access / start a trial (→ the app's
   `acaciaco-site` page), and to support (Module 8) for a locked-out tenant.
+- **Never show a social login button for a provider that isn't actually
+  enabled on the backend.** `loginWithProvider('apple', ...)` against a
+  provider Base44 hasn't configured for this app doesn't degrade gracefully
+  — it throws the platform's raw error (`Apple authentication is not enabled
+  for this app. Please contact the app admin for access.`) before any
+  account exists, so tapping it is a dead end at the very first screen, with
+  nothing the user can do about it and no account for the app's own owner to
+  even find and debug. Found in Rumbo (`docs/incidents.md`): a prospective
+  tenant employee tapped "Continuar con Apple," hit exactly that error, and
+  never got an account at all — invisible until the user reported it by
+  hand, because there was no account to notice was missing. Every social
+  button offered must correspond to a provider actually configured for that
+  Base44 app; one that isn't gets removed from the UI, not left for a user
+  to discover is dead.
 - Dark-theme correct by default, like every other screen (Module 9's
   dark-theme rule applies here too — a login page is the worst place for a
   washed-out unstyled color to show up first).
@@ -984,7 +998,7 @@ the proof.
 
 ---
 
-## 18. Multi-tenant account switching — one email, several tenants
+## 18. Multi-tenant account switching and joining — one email, several tenants, always joinable
 
 **The gap this closes.** An operator's email is not exclusive to one tenant. The
 same person owns two rental fleets, an accountant admins three restaurants, a
@@ -995,40 +1009,89 @@ portfolio actually did about it, before this module, was pick the **first**
 match — by creation order, inside whatever function resolves the caller's
 tenant — and **persist it permanently** on the user profile. The second tenant
 was never wrong; it was invisible. Rumbo's `resolveTenant` walks
-`created_by_id → owner_email → members[]` and returns on the first hit, and its
-`joinTenant` then actively refuses a second membership ("ya perteneces a otra
-organización — sal de ella antes de unirte a una nueva"). An owner who
-legitimately runs two businesses through the same login is locked into
-whichever tenant the resolver saw first, with no error, no prompt, and no way
-out short of a support ticket.
+`created_by_id → owner_email → members[]` and returns on the first hit.
 
-**The fix is two backend calls and one frontend control, not a rewrite of the
-tenant model.**
+**A second, sharper gap sits right next to it, and this module now closes both
+in one shape.** Discovering tenants you already implicitly belong to
+(`owner_email`, `created_by_id`, a pre-existing entry in an embedded
+`members[]`) is not the same problem as *joining a new one by invite code once
+you already have an account*. Rumbo's `joinTenant` conflates them: it actively
+refuses a second membership by code — "ya perteneces a otra organización — sal
+de ella antes de unirte a una nueva" — treating "already has a tenant" as
+grounds to reject, rather than checking the one thing that actually matters
+("already a member of *this* tenant"). An owner who legitimately runs two
+businesses through the same login, or a staff member invited into a second
+company after they already work at one, hits a dead end with no error that
+points anywhere but "leave your current organization first" — for someone who
+has no intention of leaving it. **This is the anti-pattern the module now
+names explicitly and rules out**, in favor of CtrlHQ's reference shape below,
+which was built to do exactly this and has it running in production.
+
+**The reference architecture is CtrlHQ's `Membership` entity — a first-class
+join row, not an embedded array.** Where Rumbo's model discovers membership by
+scanning fields on the tenant record itself (`owner_email`, `members[]`),
+CtrlHQ's `Membership` (`base44/entities/Membership.jsonc`) is its own entity:
+one row per `(tenant_id, user_id, role)`, with `read` keyed on
+`{{user.id}}` rather than on `tenant_id` — which is precisely what lets a
+caller list tenants they are **not** currently active in. That shape is what
+makes "join a second one" and "discover ones I already implicitly belong to"
+the same code path instead of two: both end in a `Membership` row, whether it
+was created by the original owner/creator logic or by redeeming an invite
+code later. An app that already ships an embedded-array model can keep its
+existing discovery logic for legacy implicit memberships — that part of the
+gap above still applies unchanged — but the **join flow itself** must follow
+the rule in point 2 below regardless of which storage shape backs it.
 
 1. **The resolver stops guessing.** Whatever function today derives the
-   caller's tenant from `created_by_id`/`owner_email`/`members[]` (Rumbo:
-   `resolveTenant`) computes the **full set** of matching tenants, not just the
-   first. If the caller already has a valid `tenant_id` persisted, keep using
-   it — nothing changes for the common case — but return the full candidate
-   list alongside it so the client can offer a switcher whenever
-   `candidates.length > 1`. If nothing is persisted yet and there is exactly
-   one candidate, auto-assign it as before — no reason to interrupt a user who
-   has only ever belonged to one tenant. If nothing is persisted and there is
-   more than one candidate, **do not guess**: return a "choose one" state
-   instead of onboarding or a silent pick.
-2. **A dedicated switch endpoint, server-derived twice.** A new function
-   (Rumbo: `switchTenant`) takes a `tenant_id` from the client and
-   **recomputes the caller's legitimate candidate set from scratch**, the same
-   way the resolver does — it never trusts that an id the client sent is one
-   the caller actually belongs to. A `tenant_id` outside that set gets the
-   exact same refusal as a `tenant_id` that does not exist (this is Module
-   14's tenant-switching clause, §6, applied for real: the endpoint must not
-   become an existence oracle). A valid switch re-derives role the same way
-   first login does — `owner_email` match → owner, `members[]` match → that
-   member's stored role, creator → whatever role the profile already
-   carries — and recomputes `write_access` against the new tenant's licence
+   caller's tenant (CtrlHQ: implicit via `Membership.filter({user_id})`;
+   Rumbo: `resolveTenant` walking `created_by_id`/`owner_email`/`members[]`)
+   computes the **full set** of matching tenants, not just the first. If the
+   caller already has a valid `tenant_id` persisted, keep using it — nothing
+   changes for the common case — but return the full candidate list alongside
+   it so the client can offer a switcher whenever `candidates.length > 1`. If
+   nothing is persisted yet and there is exactly one candidate, auto-assign it
+   as before — no reason to interrupt a user who has only ever belonged to one
+   tenant. If nothing is persisted and there is more than one candidate, **do
+   not guess**: return a "choose one" state instead of onboarding or a silent
+   pick.
+2. **Joining a tenant by invite code must succeed regardless of how many other
+   tenants the caller already belongs to.** The *only* legitimate refusal is
+   "the caller is already a member of *this exact* tenant" (idempotent —
+   redeeming the same code twice is a no-op or a clear "ya perteneces a ese
+   negocio", not an error) — never "you already belong to a *different* one."
+   CtrlHQ's `complete-onboarding` (`mode: "join"`) is the reference: it
+   creates a new `Membership` row for the target tenant and immediately moves the
+   caller's active `tenant_id`/`business_id` pointer onto it — a person who
+   just redeemed a code expects to land inside the tenant they joined, not
+   have to invoke a separate switch afterward. The one thing this endpoint
+   still checks before writing: the target tenant itself is joinable (not
+   cancelled/suspended, same posture Module 1 already requires elsewhere).
+3. **The join/create screen is reachable from inside the app, not only
+   pre-onboarding.** Gating the create-or-join screen exclusively on "this
+   account has no tenant yet" (as a route guard, a `TenantGate`, or similar)
+   is what makes point 2 unreachable in practice even when the backend allows
+   it — an already-onboarded account has no way to get back to that screen to
+   redeem a second code. CtrlHQ's fix: the tenant switcher control (point 4)
+   always carries a "Crear o unirme a otro negocio" entry that routes to the
+   same `/onboarding` screen an account with no tenant sees, and the join tab
+   on that screen works identically whether the caller arrived with zero
+   tenants or five.
+4. **A dedicated switch endpoint, server-derived twice.** A function (CtrlHQ:
+   `switch-tenant`; Rumbo: `switchTenant`) takes a `tenant_id` from the client
+   and **recomputes the caller's legitimate `Membership`/candidate set from
+   scratch**, the same way the resolver does — it never trusts that an id the
+   client sent is one the caller actually belongs to. A `tenant_id` outside
+   that set gets the exact same refusal as a `tenant_id` that does not exist
+   (this is Module 14's tenant-switching clause, §6, applied for real: the
+   endpoint must not become an existence oracle). A valid switch re-derives
+   role the same way first login does — `owner_email` match → owner,
+   `members[]`/`Membership` match → that member's stored role, creator →
+   whatever role the profile already carries, and the platform owner keeps
+   its platform-tier role across every switch rather than being demoted to
+   whatever the target tenant would normally grant — and recomputes
+   `write_access`/`billing_status` gating against the new tenant's licence
    state. Nothing about the previous tenant is trusted forward.
-3. **One switcher, reachable once it's needed.** A control — account menu,
+5. **One switcher, reachable once it's needed.** A control — account menu,
    sidebar, wherever the app's chrome has room — lists the caller's tenants by
    name and marks the active one, visible only when `candidates.length > 1` (an
    operator with one tenant never sees a control with nothing to do). Picking a
@@ -1039,23 +1102,28 @@ tenant model.**
    `business_id` survives in a closure, and a reload is the one reset that
    cannot leave one behind. The same control is what a brand-new, ambiguous
    login sees instead of the onboarding screen when the resolver reports more
-   than one candidate and nothing persisted yet — same component, two entry
-   points.
+   than one candidate and nothing persisted yet — same component, multiple
+   entry points (ambiguous first login, "switch", and "join another").
 
 **What this does not change.** A tenant's own RLS and every `guardedEntityWrite`
 -style Safe function still key off the **single** `tenant_id` persisted on the
-caller's profile at request time (Module 3, Module 4) — switching writes that
-one field through the same server-authoritative path first login already uses;
-it does not add a second identity or a session that spans two tenants at once.
-An operator is always acting as exactly one tenant; switching only changes
-which one, deliberately, one field write at a time.
+caller's profile at request time (Module 3, Module 4) — joining and switching
+both write that one field through the same server-authoritative path first
+login already uses; neither adds a second identity or a session that spans two
+tenants at once. An operator is always acting as exactly one tenant; joining a
+new one changes which tenant that is, immediately and deliberately, the same
+way an explicit switch does.
 
 **Verify it like every other module: read the deployed behavior, not the
 diff.** Log in as an email that is `owner_email`/creator/member on two tenants
 and confirm: (a) the picker (or switcher) actually lists both, by name; (b)
 switching changes every tenant-scoped screen's data, not just the header; (c)
 requesting a `tenant_id` the caller does not belong to — by editing the call
-directly — gets the same response as a nonexistent id.
+directly — gets the same response as a nonexistent id; (d) from an
+already-onboarded account, redeeming a second, valid invite code succeeds and
+lands the caller inside the newly joined tenant — not a refusal telling them
+to leave their current one first; (e) redeeming a code for a tenant the caller
+is already a member of is idempotent, not an error about the *other* tenant.
 
 ---
 
@@ -1253,7 +1321,7 @@ Each module's proof is a thing you can run and read.
 | 14 isolation | no tenant can reach another | the dated audit, naming what could **not** be verified |
 | 15 bridge | each app signs as itself | a full sync with zero `rejected the derived key` in MC's log |
 | 16 secrets | the value is what you think | read it back from the panel, or make a call that only succeeds if it is right |
-| 18 tenant switching | one email reaches every tenant it belongs to, and no other | log in as a multi-tenant email, confirm the picker lists all of them and a foreign `tenant_id` gets the same refusal as a nonexistent one |
+| 18 tenant switching & joining | one email reaches every tenant it belongs to, and no other, and can always join one more | log in as a multi-tenant email, confirm the picker lists all of them, a foreign `tenant_id` gets the same refusal as a nonexistent one, and redeeming a second valid invite code from an already-onboarded account succeeds instead of being told to leave the first tenant |
 | 19 lock survives debugging | a shipped security lock is still on | deployed schema still shows it, repo file agrees with the deployed schema, and its description still states the rationale |
 | 20 session control | idle logs out, stale sessions get reaped | wait past the idle threshold and confirm the warning/logout fires; check a session whose `last_seen` is older than 48h flips to `revoked` after the reap job runs |
 | 21 about screen | version/changelog/manual/contact are one screen, in sync | the version shown matches `package.json` and the update banner; the changelog entry for the current version is non-empty |
@@ -1295,12 +1363,17 @@ Each module's proof is a thing you can run and read.
 15. Set every secret in Module 16's inventory **and read each one back**, then
     prove the whole chain with one *Sincronizar ahora*: an `app_health` row,
     an audit row, and no `rejected the derived key` in Mission Control's log.
-16. If the tenant entity's `owner_email`/`members[]` shape lets one email reach
-    more than one tenant, build the Module 18 switcher from day one — the
-    resolver returning every candidate, the dedicated switch endpoint that
-    re-derives the candidate set server-side, and the control itself.
-    Retrofitting it later means every profile that already got silently locked
-    to the wrong tenant needs a one-time nudge to re-resolve.
+16. Build Module 18 from day one, on a first-class `Membership` entity
+    (CtrlHQ's shape: one row per `(tenant_id, user_id, role)`, `read` keyed on
+    `{{user.id}}`) rather than an embedded `owner_email`/`members[]` array —
+    the resolver returning every candidate, a join flow that always succeeds
+    regardless of how many other tenants the caller already belongs to, the
+    dedicated switch endpoint that re-derives the candidate set server-side,
+    and the switcher/join control itself, reachable from inside the app once a
+    tenant is already active. Retrofitting it later means every profile that
+    already got silently locked to the wrong tenant needs a one-time nudge to
+    re-resolve, and every account that was ever told "leave your tenant first"
+    needs its block lifted.
 17. Copy [`shared/session/`](shared/session/) in (Module 20): the idle
     warning/logout pair, the activity-tracking heartbeat, the per-device
     `Session` entity with the active/passive model, and the stale-session
